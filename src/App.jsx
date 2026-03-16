@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import './App.css';
 import { Game } from './game/Game.js';
 import { MetaProgression } from './systems/MetaProgression.js';
@@ -21,8 +21,9 @@ import LobbyScreen from './ui/LobbyScreen.jsx';
     | characterSelect | weaponSelect                 (solo)
     | coopChar1 | coopWeapon1 | coopChar2 | coopWeapon2  (local coop)
     | lobbyCreate | lobbyJoin                         (network lobby)
-    | netCharSelect | netWeaponSelect                 (network char pick)
-    | netWaiting                                      (guest waiting)
+    | netCharSelect | netWeaponSelect                 (network host char pick)
+    | netGuestCharSelect | netGuestWeaponSelect       (network guest char pick)
+    | netWaiting                                      (waiting for all players to be ready)
     | playing | levelup | paused | gameover
 */
 
@@ -40,19 +41,22 @@ export default function App() {
   const [levelUpPlayerIdx, setLevelUpPlayerIdx] = useState(0);
   const [gameOverStats,    setGameOverStats]     = useState(null);
   const [selectedChar,     setSelectedChar]     = useState(null);
+  const [netWaitingMsg,    setNetWaitingMsg]    = useState('');
 
   // Local coop state
   const [coopChar1,   setCoopChar1]   = useState(null);
-  const [coopWeapon1, setCoopWeapon1] = useState(null);
   const [coopChar2,   setCoopChar2]   = useState(null);
+  const [coopWeapon1, setCoopWeapon1] = useState(null);
   const [gameMode,    setGameMode]    = useState('solo');
 
   // Network state
   const [netPlayerList,  setNetPlayerList]  = useState([]);
   const [netMyIndex,     setNetMyIndex]     = useState(0);
-  const [netLobbyMode,   setNetLobbyMode]   = useState('create'); // 'create'|'join'
-  const [netSelections,  setNetSelections]  = useState({}); // playerIndex → {charData, startWeapon}
-  const [netGuestScreen, setNetGuestScreen] = useState(''); // what guest sees
+  const [netLobbyMode,   setNetLobbyMode]   = useState('create');
+  const [netHostChar,    setNetHostChar]    = useState(null);
+  const [netGuestChar,   setNetGuestChar]   = useState(null);
+  // Store host config until all guests ready
+  const netHostConfigRef = useRef(null);
 
   const [essenceEarned,  setEssenceEarned] = useState(null);
   const [, forceEssenceUpdate] = useState(0);
@@ -145,7 +149,7 @@ export default function App() {
     }, 0);
   }, [currentBest, destroyGame]);
 
-  // ── Guest game (render-only) ───────────────────────────────────────
+  // ── Guest game (render-only + client-side prediction) ─────────────
   const launchGuestGame = useCallback((playerConfigs, networkManager, localPlayerIndex) => {
     destroyGame();
     setHudStats(null);
@@ -182,7 +186,7 @@ export default function App() {
       // Guest: receive state updates
       networkManager.onStateUpdate = (state) => {
         game.applyNetworkState(state);
-        game._pauseDrawDone = false; // ensure it redraws
+        game._pauseDrawDone = false;
       };
 
       // Guest: receive level-up request
@@ -199,7 +203,14 @@ export default function App() {
         setScreen('gameover');
       };
 
-      // Guest: send local input to host every frame via requestAnimationFrame
+      // Guest: select_phase = host wants a replay
+      networkManager.onSelectPhase = () => {
+        destroyGame();
+        setNetGuestChar(null);
+        setScreen('netGuestCharSelect');
+      };
+
+      // Guest: send local input to host every frame
       let rafId;
       const sendInputLoop = () => {
         if (!game.running) return;
@@ -248,61 +259,96 @@ export default function App() {
     setScreen(mode === 'create' ? 'lobbyCreate' : 'lobbyJoin');
   }, [destroyNet]);
 
-  // Host: lobby says "start" with player list
+  // Lobby "start" → host sends select_phase, everyone goes to char select
   const handleLobbyStart = useCallback((playerList) => {
     setNetPlayerList(playerList);
-    // Each player now selects their character
-    // Host selects first (their own)
     setNetMyIndex(0);
+    const nm = netRef.current;
+    if (nm) {
+      nm.startSelectionPhase(); // tell guests to go to char select
+    }
+    setNetHostChar(null);
     setScreen('netCharSelect');
   }, []);
 
-  // Host character+weapon selection
-  const [netHostChar, setNetHostChar] = useState(null);
+  // ── Network host character + weapon selection ──────────────────────
   const handleNetCharSelect = useCallback((char) => {
     setNetHostChar(char);
     setScreen('netWeaponSelect');
   }, []);
 
   const handleNetWeaponSelect = useCallback((weaponId) => {
-    const char = applyMeta(netHostChar);
-    const mySelection = { charData: char, startWeapon: weaponId };
     const nm = netRef.current;
+    const hostConfig = {
+      charData: applyMeta(netHostChar),
+      startWeapon: weaponId,
+      startWeaponTier: meta.getWeaponTier(weaponId),
+    };
+    netHostConfigRef.current = hostConfig;
 
-    // Tell guests to select their characters
-    // Build player configs: host is P0, guests fill P1..PN
-    // We'll wait for all guests' selections
-    const allSelections = { 0: mySelection };
-    setNetSelections(allSelections);
-
-    // Host broadcasts "start selection phase" to guests
-    if (nm) {
-      nm.onPlayerList = (list) => setNetPlayerList(list);
+    // If no guests, start immediately
+    const guestCount = netPlayerList.length - 1;
+    if (guestCount <= 0) {
+      const configs = [hostConfig];
+      nm.startGame(configs);
+      launchGame(configs, nm, 0);
+      return;
     }
 
-    // For simplicity: host starts game with just their config, guests are assigned
-    // default config until they send selections. We'll use a simple flow:
-    // Host collects selections, then starts game when all ready.
-    // Since async selection is complex, use a simpler flow:
-    // All players in lobby pre-selected via separate char select UI.
-    // We'll just start with what we have and add guests as they connect.
+    // Wait for all guests to be ready
+    setNetWaitingMsg('En attente des autres joueurs…');
+    setScreen('netWaiting');
 
-    // Build configs array for all players
-    const configs = netPlayerList.map((p, i) => {
-      if (i === 0) return { ...mySelection, startWeaponTier: meta.getWeaponTier(weaponId) };
-      return { charData: null, startWeapon: 'orb' }; // guests will be assigned after
-    });
-
-    nm.startGame(configs);
-    setNetMyIndex(0);
-    launchGame(configs, nm, 0);
+    nm.onAllPlayersReady = (guestSelections) => {
+      const configs = netPlayerList.map((p, i) => {
+        if (i === 0) return hostConfig;
+        const sel = guestSelections[i];
+        if (sel) {
+          return {
+            charData: sel.charData,
+            startWeapon: sel.startWeapon,
+            startWeaponTier: meta.getWeaponTier(sel.startWeapon),
+          };
+        }
+        return { charData: null, startWeapon: 'orb' };
+      });
+      nm.startGame(configs);
+      launchGame(configs, nm, 0);
+    };
   }, [netHostChar, netPlayerList, applyMeta, launchGame]);
 
-  // Guest: after lobby, select character
-  const handleNetGuestCharSelect = useCallback((char) => {
-    setNetHostChar(char);
-    setScreen('netGuestWeaponSelect');
-  }, []);
+  // ── Network guest character + weapon selection ─────────────────────
+
+  // When guest is in lobby and receives select_phase, go to char select
+  useEffect(() => {
+    if (gameMode === 'network' && netRef.current && !netRef.current.isHost) {
+      const nm = netRef.current;
+      nm.onSelectPhase = () => {
+        setNetPlayerList(nm.playerList);
+        setNetGuestChar(null);
+        setScreen('netGuestCharSelect');
+      };
+    }
+  }, [gameMode]);
+
+  const handleNetGuestWeaponSelect = useCallback((weaponId) => {
+    const char = applyMeta(netGuestChar);
+    const nm = netRef.current;
+
+    // Tell host we are ready
+    nm?.sendPlayerReady(char, weaponId);
+
+    // Wait for host to start the game
+    setNetWaitingMsg('Sélection confirmée ! En attente du démarrage…');
+    setScreen('netWaiting');
+
+    if (nm) {
+      nm.onGameStart = (playerConfigs, myIndex) => {
+        setNetMyIndex(myIndex);
+        launchGuestGame(playerConfigs, nm, myIndex);
+      };
+    }
+  }, [netGuestChar, applyMeta, launchGuestGame]);
 
   // ── Shops ──────────────────────────────────────────────────────────
   const handleTitleShop       = useCallback(() => setScreen('shop'), []);
@@ -332,41 +378,38 @@ export default function App() {
 
   // ── Game over ──────────────────────────────────────────────────────
   const handleReplay = useCallback(() => { setScreen('characterSelect'); setGameMode('solo'); }, []);
+
   const handleReplaySameChar = useCallback(() => {
-    if (gameMode === 'coop')         setScreen('coopChar1');
-    else if (gameMode === 'network') setScreen(netRef.current?.isHost ? 'netCharSelect' : 'netGuestCharSelect');
-    else if (selectedChar)           setScreen('weaponSelect');
-    else                             setScreen('characterSelect');
-  }, [gameMode, selectedChar]);
-  const handleMenu = useCallback(() => { destroyGame(); destroyNet(); setScreen('title'); }, [destroyGame, destroyNet]);
-
-  useEffect(() => {
-    // Guest: wire up onGameStart when in network non-host mode
-    if (gameMode === 'network' && netRef.current && !netRef.current.isHost) {
+    if (gameMode === 'network') {
       const nm = netRef.current;
-      nm.onGameStart = (playerConfigs, myIndex) => {
-        setNetMyIndex(myIndex);
-        // Guest: go to char select to send their selection
-        setScreen('netGuestCharSelect');
-        // Store configs for later use
-        setNetPlayerList(nm.playerList);
-      };
+      if (nm?.isHost) {
+        // Host: destroy game, tell guests to re-select, go to char select
+        destroyGame();
+        nm.broadcastReplay();
+        setNetHostChar(null);
+        setScreen('netCharSelect');
+      } else {
+        // Guest: destroy game, wait for host's select_phase
+        destroyGame();
+        setNetWaitingMsg('En attente que l\'hôte relance la partie…');
+        setScreen('netWaiting');
+        if (nm) {
+          nm.onSelectPhase = () => {
+            setNetGuestChar(null);
+            setScreen('netGuestCharSelect');
+          };
+        }
+      }
+    } else if (gameMode === 'coop') {
+      setScreen('coopChar1');
+    } else if (selectedChar) {
+      setScreen('weaponSelect');
+    } else {
+      setScreen('characterSelect');
     }
-  }, [gameMode]);
+  }, [gameMode, selectedChar, destroyGame]);
 
-  // Network guest weapon select → launch guest game
-  const [netGuestChar, setNetGuestChar] = useState(null);
-  const handleNetGuestWeaponSelect = useCallback((weaponId) => {
-    const char = applyMeta(netGuestChar);
-    const nm = netRef.current;
-    nm?.sendCharacterSelect(char, weaponId);
-
-    // Build a local player config for rendering — guest's player at their index
-    const configs = netPlayerList.map((_, i) => ({ charData: null, startWeapon: 'orb' }));
-    configs[netMyIndex] = { charData: char, startWeapon: weaponId, startWeaponTier: meta.getWeaponTier(weaponId) };
-
-    launchGuestGame(configs, nm, netMyIndex);
-  }, [netGuestChar, netPlayerList, netMyIndex, applyMeta, launchGuestGame]);
+  const handleMenu = useCallback(() => { destroyGame(); destroyNet(); setScreen('title'); }, [destroyGame, destroyNet]);
 
   useEffect(() => () => { destroyGame(); destroyNet(); }, []);
 
@@ -464,6 +507,19 @@ export default function App() {
           title="RÉSEAU — Votre arme"
           playerColor={['#4488ff','#ffaa44','#44ff88','#ff44aa'][netMyIndex] || '#fff'}
         />
+      )}
+
+      {/* Waiting screen (network: after selection, before game start) */}
+      {screen === 'netWaiting' && (
+        <div style={{
+          position: 'absolute', inset: 0, background: '#0a0a1a',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+          color: '#ffffff', fontFamily: 'monospace',
+        }}>
+          <div style={{ fontSize: 40, marginBottom: 24, animation: 'spin 1.5s linear infinite' }}>⟳</div>
+          <p style={{ fontSize: 18, color: '#aaaaff' }}>{netWaitingMsg || 'Chargement…'}</p>
+          <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+        </div>
       )}
 
       {screen === 'gameover' && (

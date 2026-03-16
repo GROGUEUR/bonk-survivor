@@ -1,11 +1,14 @@
 /**
  * NetworkManager — PeerJS-based P2P lobby + game sync.
  *
- * HOST:  creates room → shares 6-char code → players join → host starts game
+ * HOST:  creates room → shares code → players join → host starts selection phase
+ *        all players select char/weapon → host collects all ready signals → starts game
  *        sends compressed game state @ 20fps to all guests
  *        receives input packets from guests each frame
  *
  * GUEST: joins with room code → receives lobby updates
+ *        receives select_phase → selects char/weapon → sends player_ready
+ *        receives start → launches game
  *        sends input packet each frame to host
  *        receives state snapshots and renders them
  *
@@ -48,20 +51,23 @@ export class NetworkManager {
     this.playerList      = [];         // [{ id, name, index, charData, startWeapon }]
     this._conns          = {};         // peerId → DataConnection (host only)
     this._hostConn       = null;       // single connection to host (guest only)
-    this._stateTimer     = 0;
+    this._readySelections= {};         // playerIndex → {charData, startWeapon} (host only)
 
     // Callbacks (set by App or Game)
-    this.onOpen           = null;  // (shortCode) — host is open
-    this.onJoined         = null;  // (playerList) — guest joined successfully
-    this.onPlayerList     = null;  // (playerList) — lobby updated
-    this.onGameStart      = null;  // (playerConfigs, myIndex) — start the game
-    this.onStateUpdate    = null;  // (state) — guest: received host game state
-    this.onInputReceived  = null;  // (playerIndex, inputObj) — host: got guest input
-    this.onLevelUpRequest = null;  // (choices, isChest, playerIndex) — guest: choose upgrade
-    this.onLevelUpChoice  = null;  // (choice, playerIndex) — host: guest chose
-    this.onGameOver       = null;  // (stats) — guest: game is over
-    this.onDisconnect     = null;  // (playerIndex)
-    this.onError          = null;  // (err)
+    this.onOpen              = null;  // (shortCode) — host is open
+    this.onJoined            = null;  // (playerList) — guest joined successfully
+    this.onPlayerList        = null;  // (playerList) — lobby updated
+    this.onSelectPhase       = null;  // () — guest: received select_phase, go to char select
+    this.onAllPlayersReady   = null;  // (guestSelections) — host: all guests sent player_ready
+    this.onGameStart         = null;  // (playerConfigs, myIndex) — start the game
+    this.onStateUpdate       = null;  // (state) — guest: received host game state
+    this.onInputReceived     = null;  // (playerIndex, inputObj) — host: got guest input
+    this.onLevelUpRequest    = null;  // (choices, isChest, playerIndex) — guest: choose upgrade
+    this.onLevelUpChoice     = null;  // (choice, playerIndex) — host: guest chose
+    this.onGameOver          = null;  // (stats) — guest: game is over
+    this.onReplay            = null;  // () — guest: host wants to replay
+    this.onDisconnect        = null;  // (playerIndex)
+    this.onError             = null;  // (err)
   }
 
   // ── HOST ────────────────────────────────────────────────────────────
@@ -133,19 +139,32 @@ export class NetworkManager {
       if (this.onPlayerList) this.onPlayerList([...this.playerList]);
     } else if (msg.type === 'input') {
       if (this.onInputReceived) this.onInputReceived(conn._playerIndex, msg.input);
-    } else if (msg.type === 'char_select') {
-      const p = this.playerList.find(x => x.id === conn.peer);
-      if (p) { p.charData = msg.charData; p.startWeapon = msg.startWeapon; }
-      this._broadcastPlayerList();
-      if (this.onPlayerList) this.onPlayerList([...this.playerList]);
+    } else if (msg.type === 'player_ready') {
+      // Guest finished char/weapon selection
+      this._readySelections[conn._playerIndex] = {
+        charData: msg.charData,
+        startWeapon: msg.startWeapon,
+      };
+      // Check if all guests are ready
+      const guestCount = Object.keys(this._conns).length;
+      const readyCount = Object.keys(this._readySelections).length;
+      if (readyCount >= guestCount && this.onAllPlayersReady) {
+        this.onAllPlayersReady({ ...this._readySelections });
+      }
     } else if (msg.type === 'levelup_choice') {
       if (this.onLevelUpChoice) this.onLevelUpChoice(msg.choice, conn._playerIndex);
     }
   }
 
-  // Host: tell all guests to start
+  // Host: tell all guests to start character selection
+  startSelectionPhase() {
+    this._readySelections = {};
+    const packet = JSON.stringify({ type: 'select_phase' });
+    Object.values(this._conns).forEach(conn => conn.send(packet));
+  }
+
+  // Host: tell all guests to start game (after all players are ready)
   startGame(playerConfigs) {
-    const packet = JSON.stringify({ type: 'start', players: playerConfigs });
     Object.values(this._conns).forEach((conn, i) => {
       conn.send(JSON.stringify({
         type: 'start',
@@ -178,6 +197,13 @@ export class NetworkManager {
   // Host: broadcast game over
   broadcastGameOver(stats) {
     const packet = JSON.stringify({ type: 'gameover', stats });
+    Object.values(this._conns).forEach(conn => conn.send(packet));
+  }
+
+  // Host: tell guests to go back to char selection for a replay
+  broadcastReplay() {
+    this._readySelections = {};
+    const packet = JSON.stringify({ type: 'select_phase' }); // reuse select_phase for replay
     Object.values(this._conns).forEach(conn => conn.send(packet));
   }
 
@@ -235,6 +261,9 @@ export class NetworkManager {
       this.localPlayerIndex = msg.myIndex;
       if (this.onPlayerList) this.onPlayerList([...this.playerList]);
       if (this.onJoined && this.localPlayerIndex !== -1) this.onJoined([...this.playerList]);
+    } else if (msg.type === 'select_phase') {
+      // Host wants us to select our character (start of game or replay)
+      if (this.onSelectPhase) this.onSelectPhase();
     } else if (msg.type === 'start') {
       this.localPlayerIndex = msg.myIndex;
       if (this.onGameStart) this.onGameStart(msg.players, msg.myIndex);
@@ -256,10 +285,10 @@ export class NetworkManager {
     }
   }
 
-  // Guest: send character selection to host
-  sendCharacterSelect(charData, startWeapon) {
+  // Guest: send character + weapon selection to host (signals readiness)
+  sendPlayerReady(charData, startWeapon) {
     if (this._hostConn?.open) {
-      this._hostConn.send(JSON.stringify({ type: 'char_select', charData, startWeapon }));
+      this._hostConn.send(JSON.stringify({ type: 'player_ready', charData, startWeapon }));
     }
   }
 

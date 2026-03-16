@@ -78,7 +78,7 @@ export class Game {
         this.playerInputs.push(input);
         if (!isLocal) this.networkManager[`_remoteInput${idx}`] = input;
       } else {
-        // Local co-op: P1=WASD, P2=IJKL
+        // Local co-op: P1=ZQSD, P2=IJKL
         const keyMaps = [P1_KEY_MAP, P2_KEY_MAP, null, null];
         this.playerInputs.push(
           idx < 2 ? new InputManager(keyMaps[idx]) : new RemoteInputManager()
@@ -326,16 +326,20 @@ export class Game {
     (state.pl || []).forEach((pd, idx) => {
       let p = this.players[idx];
       if (!p) return;
-      // Local player: use authoritative position but keep our input-predicted movement
+      // Local player: client-side prediction — keep local position unless too far off
       // Remote players: lerp toward received position
       if (idx === this.localPlayerIndex) {
-        p.x = pd.x; p.y = pd.y; // snap local player to host truth
-      } else {
-        p._netTx = pd.x; p._netTy = pd.y;
-        if (p._netTx !== undefined) {
-          p.x += (p._netTx - p.x) * 0.4;
-          p.y += (p._netTy - p.y) * 0.4;
+        const dx = pd.x - p.x, dy = pd.y - p.y;
+        const distSq = dx * dx + dy * dy;
+        if (distSq > 200 * 200) {
+          p.x = pd.x; p.y = pd.y; // hard snap only if very far off
+        } else if (distSq > 30 * 30) {
+          p.x += dx * 0.12; p.y += dy * 0.12; // gentle correction
         }
+        // else: within tolerance — trust local movement prediction
+      } else {
+        p.x += (pd.x - p.x) * 0.4;
+        p.y += (pd.y - p.y) * 0.4;
       }
       p.hp = pd.hp; p.maxHp = pd.mhp;
       p.alive = !!pd.alv;
