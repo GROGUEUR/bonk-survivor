@@ -182,12 +182,6 @@ export class NetworkManager {
   // ── GUEST ───────────────────────────────────────────────────────────
 
   async joinRoom(roomCode, guestName) {
-    // We need the full peer ID. The host uses last 6 chars as room code.
-    // Guests must connect using the full peer ID.
-    // So we store the full ID somewhere... actually the room code IS the peer ID.
-    // Let's change approach: room code = full peer ID (can be long, but user can copy-paste)
-    // OR we use a shorter code. Since PeerJS allows custom IDs, host can use a 6-char custom ID.
-
     return new Promise((resolve, reject) => {
       this.peer   = new Peer();
       this.isHost = false;
@@ -195,7 +189,9 @@ export class NetworkManager {
       this.peer.on('open', (myId) => {
         this.localPlayerIndex = -1; // assigned by host
 
-        const conn = this.peer.connect(roomCode, { reliable: true });
+        // Normalize: room codes are stored lowercase
+        const normalizedCode = roomCode.trim().toLowerCase();
+        const conn = this.peer.connect(normalizedCode, { reliable: true });
         this._hostConn = conn;
 
         conn.on('open', () => {

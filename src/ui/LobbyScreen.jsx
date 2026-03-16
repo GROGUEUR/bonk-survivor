@@ -135,7 +135,7 @@ export default function LobbyScreen({
         {isHost && (
           <div className="lobby-code-box">
             <span className="lobby-code-label">ID à partager avec vos amis :</span>
-            <span className="lobby-code-value">{roomCode}</span>
+            <span className="lobby-code-value">{roomCode.toUpperCase()}</span>
             <button className="lobby-copy-btn" onClick={handleCopyCode}>
               {copied ? '✓ Copié !' : 'Copier'}
             </button>
