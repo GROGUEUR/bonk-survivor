@@ -9,7 +9,7 @@ export class Enemy {
     this.maxHp = scaledStats.hp;
     this.hp = scaledStats.hp;
     this.damage = scaledStats.damage;
-    this.speed = typeDef.speed;
+    this.speed = scaledStats.speed ?? typeDef.speed;
     this.size = typeDef.size;
     this.color = typeDef.color;
     this.shape = typeDef.shape;
@@ -146,12 +146,24 @@ export class Enemy {
 
     ctx.restore();
 
+    // Elite glow aura
+    if (this.isElite && !this.flashTimer) {
+      ctx.save();
+      ctx.globalAlpha = 0.35 + Math.sin(this.animAngle * 4) * 0.15;
+      ctx.strokeStyle = '#ff8800';
+      ctx.lineWidth   = 3;
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size * 0.8, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // HP bar
     if (this.hp < this.maxHp) {
       const barW = this.size;
       ctx.fillStyle = '#440000';
       ctx.fillRect(this.x - barW / 2, this.y - this.size / 2 - 8, barW, 3);
-      ctx.fillStyle = '#ff4444';
+      ctx.fillStyle = this.isElite ? '#ff8800' : '#ff4444';
       ctx.fillRect(this.x - barW / 2, this.y - this.size / 2 - 8, barW * (this.hp / this.maxHp), 3);
     }
   }

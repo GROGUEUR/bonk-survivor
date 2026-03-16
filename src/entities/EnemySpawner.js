@@ -17,13 +17,17 @@ export class EnemySpawner {
     return Math.min(SPAWN.BASE_RATE + SPAWN.RATE_PER_MIN * minutes, SPAWN.MAX_RATE);
   }
 
-  getScaledStats(type, elapsed, playerCount = 1) {
-    const minutes = elapsed / 60;
-    const hpMult  = (1 + SPAWN.HP_SCALE_PER_MIN * minutes) * (1 + (playerCount - 1) * 0.5);
-    const dmgMult = 1 + SPAWN.DMG_SCALE_PER_MIN * minutes;
+  getScaledStats(type, elapsed, playerCount = 1, elite = false) {
+    const minutes    = elapsed / 60;
+    const hpMult     = Math.pow(SPAWN.HP_EXP_BASE, minutes) * (1 + (playerCount - 1) * 0.5);
+    const dmgMult    = 1 + SPAWN.DMG_SCALE_PER_MIN * minutes;
+    const speedMult  = 1 + SPAWN.SPEED_SCALE_PER_MIN * minutes;
+    const eliteMult  = elite ? 3.5 : 1;
     return {
-      hp:     Math.ceil(type.hp * hpMult),
-      damage: Math.ceil(type.damage * dmgMult),
+      hp:     Math.ceil(type.hp * hpMult * eliteMult),
+      damage: Math.ceil(type.damage * dmgMult * (elite ? 1.5 : 1)),
+      speed:  type.speed * speedMult * (elite ? 1.25 : 1),
+      elite,
     };
   }
 
@@ -73,14 +77,27 @@ export class EnemySpawner {
   update(dt, elapsed, playerX, playerY, enemies, playerCount = 1) {
     const spawnRate = this.getSpawnRate(elapsed);
     const interval = 1000 / spawnRate;
+    const minutes   = elapsed / 60;
+
+    // Elite chance: starts at min 4, grows to 25% by min 15
+    const eliteChance = minutes >= 4 ? Math.min(0.25, (minutes - 4) * 0.02) : 0;
 
     this.spawnTimer += dt;
     while (this.spawnTimer >= interval) {
       this.spawnTimer -= interval;
-      const type = this.pickEnemyType(elapsed);
-      const scaled = this.getScaledStats(type, elapsed, playerCount);
-      const pos = this.spawnEnemy(playerX, playerY);
-      enemies.push(new Enemy(pos.x, pos.y, type, scaled));
+      const type  = this.pickEnemyType(elapsed);
+      const elite = Math.random() < eliteChance;
+      const scaled = this.getScaledStats(type, elapsed, playerCount, elite);
+      const pos   = this.spawnEnemy(playerX, playerY);
+      const enemy = new Enemy(pos.x, pos.y, type, scaled);
+      if (elite) {
+        enemy.speed    = scaled.speed;
+        enemy.isElite  = true;
+        // Visual: brighter, larger
+        enemy.size     = Math.ceil(type.size * 1.4);
+        enemy.color    = '#ff8800';
+      }
+      enemies.push(enemy);
     }
 
     // Mini boss

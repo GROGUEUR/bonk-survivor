@@ -111,6 +111,26 @@ export class ObjectiveSystem {
     return Math.max(0, this.active.timeLimit - (this._currentElapsed - this.active.startElapsed));
   }
 
+  drawGoldRush(ctx, screenW, screenH, timer) {
+    const boxW = 180, boxH = 40;
+    const x = screenW / 2 - boxW / 2;
+    const y = 60;
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+    ctx.fillStyle = 'rgba(60,40,0,0.85)';
+    ctx.strokeStyle = '#ffcc44';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, y, boxW, boxH, 6) : ctx.rect(x, y, boxW, boxH);
+    ctx.fill(); ctx.stroke();
+    ctx.globalAlpha = 1;
+    ctx.font = 'bold 13px monospace';
+    ctx.fillStyle = '#ffcc44';
+    ctx.textAlign = 'center';
+    ctx.fillText(`⬡ GOLD RUSH! XP x3  ${Math.ceil(timer)}s`, screenW / 2, y + 26);
+    ctx.restore();
+  }
+
   draw(ctx, screenW, screenH) {
     if (!this.active) return;
     const obj = this.active;

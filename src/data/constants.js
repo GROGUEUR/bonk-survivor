@@ -64,9 +64,15 @@ export const BOSS = {
 };
 
 export const SPAWN = {
-  BASE_RATE: 1,
-  RATE_PER_MIN: 0.5,
-  MAX_RATE: 15,
-  HP_SCALE_PER_MIN: 0.10,
-  DMG_SCALE_PER_MIN: 0.05,
+  BASE_RATE: 1.5,           // slightly faster start
+  RATE_PER_MIN: 0.8,        // ramp faster
+  MAX_RATE: 22,             // higher cap
+  // HP: exponential — pow(1.20, minutes) → min5=2.5x, min10=6.2x, min15=15x
+  HP_EXP_BASE: 1.20,
+  // DMG: softer linear
+  DMG_SCALE_PER_MIN: 0.06,
+  // Speed: enemies get faster over time
+  SPEED_SCALE_PER_MIN: 0.04,  // +4% per minute
+  // Elite spawn chance (escalates over time)
+  ELITE_BASE_CHANCE: 0.0,     // starts 0% — unlocks at minute 4
 };

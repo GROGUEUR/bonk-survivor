@@ -16,6 +16,19 @@ import Peer from 'peerjs';
 
 export const MAX_PLAYERS = 4;
 
+// ICE config with STUN + free TURN servers for cross-network connectivity
+const ICE_CONFIG = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:global.stun.twilio.com:3478' },
+    { urls: 'turn:openrelay.metered.ca:80',      username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443',     username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+  ],
+};
+
 // ---------- Helpers ----------
 
 function generateRoomCode() {
@@ -57,7 +70,7 @@ export class NetworkManager {
     return new Promise((resolve, reject) => {
       const roomCode = generateRoomCode();
       // Use the room code directly as the PeerJS peer ID so guests can connect with it
-      this.peer     = new Peer(roomCode);
+      this.peer     = new Peer(roomCode, { config: ICE_CONFIG, debug: 0 });
       this.isHost   = true;
       this.roomCode = roomCode;
 
@@ -183,18 +196,23 @@ export class NetworkManager {
 
   async joinRoom(roomCode, guestName) {
     return new Promise((resolve, reject) => {
-      this.peer   = new Peer();
+      this.peer   = new Peer({ config: ICE_CONFIG, debug: 0 });
       this.isHost = false;
 
-      this.peer.on('open', (myId) => {
-        this.localPlayerIndex = -1; // assigned by host
+      // Timeout if connection never establishes (symmetric NAT, wrong code, etc.)
+      const timeout = setTimeout(() => {
+        reject(new Error('Timeout : impossible de rejoindre (vérifiez le code ou votre réseau)'));
+      }, 18000);
 
-        // Normalize: room codes are stored lowercase
+      this.peer.on('open', (myId) => {
+        this.localPlayerIndex = -1;
+
         const normalizedCode = roomCode.trim().toLowerCase();
         const conn = this.peer.connect(normalizedCode, { reliable: true });
         this._hostConn = conn;
 
         conn.on('open', () => {
+          clearTimeout(timeout);
           conn.send(JSON.stringify({ type: 'join', name: guestName, id: myId }));
           conn.on('data', (rawData) => {
             const msg = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
@@ -204,10 +222,10 @@ export class NetworkManager {
           resolve();
         });
 
-        conn.on('error', reject);
+        conn.on('error', (e) => { clearTimeout(timeout); reject(e); });
       });
 
-      this.peer.on('error', reject);
+      this.peer.on('error', (e) => { clearTimeout(timeout); reject(e); });
     });
   }
 

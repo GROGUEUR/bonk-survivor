@@ -113,6 +113,13 @@ export class Game {
     this.manualPause = false;
     this.running     = true;
 
+    // Retention mechanics
+    this._nextKillMilestone = 50;  // chest every 50/100/150... kills
+    this._goldRushActive    = false;
+    this._goldRushTimer     = 0;
+    this._goldRushCooldown  = 0;   // cooldown after each gold rush
+    this._goldRushInterval  = 120; // seconds between gold rushes
+
     // Level-up queue: { playerIndex, isChest }
     this._levelUpQueue         = [];
     this._activeLevelUpPlayer  = -1;
@@ -262,6 +269,7 @@ export class Game {
       k:  this.killCount,
       bk: this.bossKills,
       fa: Math.round(this.flashAlpha * 100) / 100,
+      gr: this._goldRushActive ? Math.round(this._goldRushTimer) : 0,
       bw: Math.round(this.bossWarningTimer),
       bt: this.bossWarningType,
       cc: this.combo.count,
@@ -304,6 +312,12 @@ export class Game {
     this.killCount       = state.k ?? this.killCount;
     this.bossKills       = state.bk ?? this.bossKills;
     this.flashAlpha      = state.fa ?? 0;
+    if (state.gr > 0 && !this._goldRushActive) {
+      this._goldRushActive = true;
+      this._goldRushTimer  = state.gr;
+    } else if (state.gr === 0) {
+      this._goldRushActive = false;
+    }
     this.bossWarningTimer = state.bw ?? 0;
     this.bossWarningType  = state.bt ?? '';
     if (this.combo) this.combo.count = state.cc ?? 0;
@@ -312,7 +326,17 @@ export class Game {
     (state.pl || []).forEach((pd, idx) => {
       let p = this.players[idx];
       if (!p) return;
-      p.x = pd.x; p.y = pd.y;
+      // Local player: use authoritative position but keep our input-predicted movement
+      // Remote players: lerp toward received position
+      if (idx === this.localPlayerIndex) {
+        p.x = pd.x; p.y = pd.y; // snap local player to host truth
+      } else {
+        p._netTx = pd.x; p._netTy = pd.y;
+        if (p._netTx !== undefined) {
+          p.x += (p._netTx - p.x) * 0.4;
+          p.y += (p._netTy - p.y) * 0.4;
+        }
+      }
       p.hp = pd.hp; p.maxHp = pd.mhp;
       p.alive = !!pd.alv;
       p.dashActive = !!pd.da;
@@ -350,7 +374,10 @@ export class Game {
     (state.en || []).forEach(ed => {
       if (existingById[ed.id]) {
         const e = existingById[ed.id];
-        e.x = ed.x; e.y = ed.y; e.hp = ed.hp; e.maxHp = ed.mhp;
+        // Lerp enemy positions for smooth movement on guest
+        e.x += (ed.x - e.x) * 0.35;
+        e.y += (ed.y - e.y) * 0.35;
+        e.hp = ed.hp; e.maxHp = ed.mhp;
       } else {
         // Create a minimal render-only enemy
         const e = { _netId: ed.id, x: ed.x, y: ed.y, hp: ed.hp, maxHp: ed.mhp,
@@ -472,6 +499,27 @@ export class Game {
     if (!this._killStreakObjSpawned && this.elapsed >= 60) {
       this._killStreakObjSpawned = true;
       this.objectives.startKillStreak(20, this.elapsed);
+    }
+
+    // Gold Rush: every 2 minutes (first at 90s), lasts 20s — triple XP
+    if (!this._goldRushActive) {
+      this._goldRushCooldown -= dt / 1000;
+      if (this._goldRushCooldown <= 0 && this.elapsed >= 90) {
+        this._goldRushActive   = true;
+        this._goldRushTimer    = 20; // 20 seconds
+        this._goldRushCooldown = this._goldRushInterval;
+        this.flashAlpha = 0.18; // golden flash
+        this.damageNumbers.addText(
+          this.players[0].x, this.players[0].y - 60,
+          '⬡ GOLD RUSH! XP x3', '#ffcc44'
+        );
+      }
+    } else {
+      this._goldRushTimer -= dt / 1000;
+      if (this._goldRushTimer <= 0) {
+        this._goldRushActive = false;
+        this._goldRushCooldown = this._goldRushInterval;
+      }
     }
 
     // Update objectives
@@ -836,6 +884,18 @@ export class Game {
     this.combo.onKill();
     this.particles.spawnDeath(enemy.x, enemy.y, enemy.color || '#888');
 
+    // Kill milestone: chest every 50 kills (bonus XP gems if Gold Rush active)
+    if (this.killCount >= this._nextKillMilestone) {
+      this._nextKillMilestone += 50;
+      this.pickups.push(new Pickup(enemy.x, enemy.y, 'chest'));
+      this.flashAlpha = 0.15; // brief flash to signal milestone
+    }
+
+    // Gold Rush: enemies drop triple XP
+    if (this._goldRushActive && enemy.xpDrops) {
+      enemy.xpDrops = enemy.xpDrops.map(d => ({ ...d, value: d.value * 3 }));
+    }
+
     // Determine killer player (use nearest if unknown)
     const killerPlayer = killer || this._getNearestAlivePlayer(enemy.x, enemy.y);
     killerPlayer.onKill(false);
@@ -1031,10 +1091,13 @@ export class Game {
     }
 
     this.combo.draw(ctx, w, h);
-    this.objectives.draw(ctx, w, h);
     this._drawOffScreenIndicators(ctx, w, h);
     this._drawBossWarning(ctx, w, h);
     this._drawMiniMap(ctx, w, h);
+    this.objectives.draw(ctx, w, h); // drawn last so minimap never covers it
+    if (this._goldRushActive) {
+      this.objectives.drawGoldRush(ctx, w, h, this._goldRushTimer);
+    }
   }
 
   _drawGrid(ctx) {
