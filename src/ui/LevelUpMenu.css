@@ -1,0 +1,126 @@
+.levelup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  z-index: 50;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.levelup-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.levelup-title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #ffdd44;
+  text-shadow: 0 0 20px #ffaa00;
+  margin: 0;
+  letter-spacing: 4px;
+  animation: scaleIn 0.3s ease;
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.levelup-player-label {
+  color: #88ccff;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  margin: -8px 0 0;
+}
+
+.levelup-subtitle {
+  color: #888;
+  font-size: 13px;
+  letter-spacing: 3px;
+  margin: -10px 0 0;
+}
+
+.levelup-cards {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.levelup-card {
+  width: 180px;
+  min-height: 200px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: rgba(10,10,30,0.95);
+  border: 2px solid #333;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  font-family: monospace;
+  color: #fff;
+  text-align: center;
+}
+
+.levelup-card:hover {
+  transform: translateY(-6px) scale(1.03);
+}
+
+.levelup-card.rarity-common { border-color: #888; }
+.levelup-card.rarity-rare { border-color: #4488ff; box-shadow: 0 0 10px #2244aa44; }
+.levelup-card.rarity-epic { border-color: #aa44ff; box-shadow: 0 0 12px #8822ff44; }
+.levelup-card.rarity-legendary { border-color: #ffaa00; box-shadow: 0 0 20px #ffaa0066; animation: legendaryGlow 1.5s infinite alternate; }
+
+@keyframes legendaryGlow {
+  from { box-shadow: 0 0 15px #ffaa0066; }
+  to { box-shadow: 0 0 30px #ffdd00aa; }
+}
+
+.levelup-card:hover.rarity-common { box-shadow: 0 0 15px #888; }
+.levelup-card:hover.rarity-rare { box-shadow: 0 0 20px #4488ff; }
+.levelup-card:hover.rarity-epic { box-shadow: 0 0 25px #aa44ff; }
+.levelup-card:hover.rarity-legendary { box-shadow: 0 0 35px #ffaa00; }
+
+.card-icon {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.card-name {
+  font-size: 14px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.card-desc {
+  font-size: 12px;
+  color: #aaa;
+  line-height: 1.4;
+}
+
+.card-rarity {
+  font-size: 10px;
+  letter-spacing: 2px;
+  margin-top: auto;
+  font-weight: bold;
+}
+
+.rarity-text-common { color: #aaa; }
+.rarity-text-rare { color: #4488ff; }
+.rarity-text-epic { color: #cc66ff; }
+.rarity-text-legendary { color: #ffaa00; }

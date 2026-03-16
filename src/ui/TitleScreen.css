@@ -1,0 +1,218 @@
+.title-screen {
+  position: fixed;
+  inset: 0;
+  background: #0a0a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  overflow: hidden;
+}
+
+.title-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(30,30,60,0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30,30,60,0.5) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+}
+
+.title-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.title-main {
+  font-size: 80px;
+  font-weight: 900;
+  color: #4488ff;
+  text-shadow: 0 0 30px #2244ff, 0 0 60px #112288;
+  letter-spacing: 12px;
+  margin: 0;
+  line-height: 1;
+}
+
+.title-sub {
+  font-size: 36px;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 0 15px #8888ff;
+  letter-spacing: 8px;
+  margin: -10px 0 0;
+}
+
+.title-tagline {
+  color: #888;
+  font-size: 14px;
+  letter-spacing: 3px;
+}
+
+.title-play-btn {
+  margin-top: 12px;
+  padding: 16px 48px;
+  font-family: monospace;
+  font-size: 22px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1144cc, #2266ff);
+  border: 2px solid #4488ff;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  box-shadow: 0 0 20px #2244aa;
+}
+
+.title-play-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 35px #4488ff;
+}
+
+.title-play-btn.pulse {
+  box-shadow: 0 0 40px #4488ff, 0 0 80px #224488;
+}
+
+.title-best {
+  font-size: 14px;
+  color: #ffdd88;
+  letter-spacing: 2px;
+}
+
+.title-controls {
+  margin-top: 16px;
+  border: 1px solid #222244;
+  border-radius: 6px;
+  padding: 16px 24px;
+  background: rgba(0,0,30,0.5);
+  min-width: 320px;
+}
+
+.controls-title {
+  color: #4488ff;
+  font-size: 12px;
+  letter-spacing: 4px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 16px;
+  font-size: 13px;
+  color: #aaa;
+}
+
+.controls-grid span:nth-child(odd) { color: #eee; }
+
+/* ── New buttons ── */
+.title-btn-group {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.title-coop-btn {
+  padding: 16px 28px;
+  font-family: monospace;
+  font-size: 17px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #ffdd88;
+  background: linear-gradient(135deg, #443300, #886600);
+  border: 2px solid #ffaa44;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  box-shadow: 0 0 12px #66440044;
+}
+.title-coop-btn:hover { transform: scale(1.04); box-shadow: 0 0 24px #ffaa44; }
+
+.title-shop-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 28px;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #ffdd44;
+  background: rgba(80,60,0,0.3);
+  border: 1px solid #664400;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.1s;
+}
+.title-shop-btn:hover { transform: scale(1.03); border-color: #ffaa00; }
+
+.title-essence-badge {
+  background: rgba(255,200,0,0.2);
+  border: 1px solid #886600;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  color: #ffcc44;
+}
+
+.title-net-group {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.title-net-btn {
+  padding: 10px 20px;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #88ccff;
+  background: rgba(0,30,80,0.4);
+  border: 1px solid #2255aa;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.1s;
+}
+.title-net-btn:hover { transform: scale(1.03); border-color: #4488ff; }
+
+.title-shop-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.title-wshop-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 28px;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #ffcc44;
+  background: rgba(60,40,0,0.4);
+  border: 1px solid #996600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.1s;
+}
+.title-wshop-btn:hover { transform: scale(1.03); border-color: #ffcc44; }
+
+.title-gold-badge {
+  background: rgba(255,200,0,0.2);
+  border: 1px solid #996600;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  color: #ffcc44;
+}

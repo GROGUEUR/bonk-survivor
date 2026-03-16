@@ -1,0 +1,144 @@
+.gameover-screen {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  z-index: 100;
+  animation: fadeIn 0.5s ease;
+  overflow-y: auto;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.gameover-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  min-width: 360px;
+  max-width: 480px;
+  padding: 24px;
+}
+
+.gameover-title {
+  font-size: 52px;
+  font-weight: 900;
+  color: #ff2222;
+  text-shadow: 0 0 30px #ff0000, 0 0 60px #880000;
+  letter-spacing: 8px;
+  margin: 0;
+  animation: glitch 2s infinite;
+}
+
+@keyframes glitch {
+  0%, 90%, 100% { transform: translateX(0); }
+  92% { transform: translateX(-3px); }
+  94% { transform: translateX(3px); }
+}
+
+.gameover-char-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.gameover-char-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--char-color, #4488ff);
+  text-shadow: 0 0 8px var(--char-color, #4488ff);
+}
+
+.gameover-char-title {
+  font-size: 11px;
+  color: #666;
+  letter-spacing: 2px;
+}
+
+.gameover-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0,0,20,0.6);
+  border: 1px solid #332233;
+  border-radius: 8px;
+  padding: 16px 28px;
+  width: 100%;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+.stat-label { color: #888; font-size: 13px; }
+.stat-value { color: #ffffff; font-size: 15px; font-weight: bold; }
+
+.gameover-weapons { width: 100%; }
+.gameover-weapons-title {
+  color: #555;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-align: center;
+  margin-bottom: 6px;
+}
+.gameover-weapons-list { display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; }
+.gameover-weapon-tag {
+  background: rgba(30,30,80,0.8);
+  border: 1px solid #334;
+  border-radius: 4px;
+  padding: 3px 9px;
+  font-size: 11px;
+  color: #aabbff;
+}
+
+.gameover-buttons {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.gameover-same-btn, .gameover-replay-btn, .gameover-menu-btn {
+  padding: 12px 20px;
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  flex: 1;
+  min-width: 100px;
+}
+
+.gameover-same-btn {
+  color: #ffdd88;
+  background: linear-gradient(135deg, #443300, #886600);
+  border: 2px solid #ffaa44;
+  box-shadow: 0 0 10px #88660044;
+}
+.gameover-same-btn:hover { transform: scale(1.04); box-shadow: 0 0 20px #ffaa44; }
+
+.gameover-replay-btn {
+  color: #fff;
+  background: linear-gradient(135deg, #660000, #aa2200);
+  border: 2px solid #ff4444;
+  box-shadow: 0 0 10px #88000044;
+}
+.gameover-replay-btn:hover { transform: scale(1.04); box-shadow: 0 0 20px #ff2222; }
+
+.gameover-menu-btn {
+  color: #aaa;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid #444;
+}
+.gameover-menu-btn:hover { color: #ddd; border-color: #888; }

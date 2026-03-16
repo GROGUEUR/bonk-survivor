@@ -1,0 +1,116 @@
+.pause-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  z-index: 60;
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pause-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  min-width: 320px;
+}
+
+.pause-title {
+  font-size: 48px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 0 20px #4488ff;
+  letter-spacing: 10px;
+  margin: 0;
+}
+
+.pause-stats {
+  width: 100%;
+  background: rgba(0,0,20,0.7);
+  border: 1px solid #223344;
+  border-radius: 8px;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pause-stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+}
+.pause-stat-row span:first-child { color: #888; }
+.pause-stat-row span:last-child  { color: #eee; font-weight: bold; }
+
+.pause-weapons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pause-weapon-chip {
+  background: rgba(30,30,80,0.8);
+  border: 1px solid #334;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 13px;
+  color: #aabbff;
+}
+
+.pause-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.pause-resume-btn, .pause-quit-btn {
+  padding: 13px 0;
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  width: 100%;
+}
+
+.pause-resume-btn {
+  color: #fff;
+  background: linear-gradient(135deg, #115522, #228844);
+  border: 2px solid #44ff88;
+  box-shadow: 0 0 12px #22884444;
+}
+.pause-resume-btn:hover {
+  transform: scale(1.03);
+  box-shadow: 0 0 22px #44ff88;
+}
+
+.pause-quit-btn {
+  color: #ffaaaa;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid #664444;
+}
+.pause-quit-btn:hover {
+  border-color: #ff4444;
+  color: #fff;
+  background: rgba(80,0,0,0.4);
+}
+
+.pause-hint {
+  font-size: 11px;
+  color: #445;
+  letter-spacing: 2px;
+}

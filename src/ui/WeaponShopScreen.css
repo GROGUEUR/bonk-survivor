@@ -1,0 +1,221 @@
+.wshop-screen {
+  position: fixed;
+  inset: 0;
+  background: #0a0a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: monospace;
+  overflow-y: auto;
+}
+
+.wshop-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(80,60,0,0.3) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(80,60,0,0.3) 1px, transparent 1px);
+  background-size: 50px 50px;
+  pointer-events: none;
+}
+
+.wshop-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 40px 32px;
+  max-width: 720px;
+  width: 100%;
+}
+
+.wshop-title {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffcc44;
+  text-shadow: 0 0 20px #aa8800;
+  letter-spacing: 6px;
+  margin: 0;
+}
+
+.wshop-currencies {
+  display: flex;
+  gap: 32px;
+  align-items: center;
+}
+
+.wshop-currency {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,20,0.6);
+  border: 1px solid #443300;
+  border-radius: 8px;
+  padding: 8px 18px;
+}
+
+.wshop-curr-icon { font-size: 20px; }
+.gold-icon  { color: #ffcc44; }
+.ess-icon   { color: #66aaff; }
+
+.wshop-curr-amount {
+  font-size: 22px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.wshop-curr-label {
+  font-size: 11px;
+  color: #888;
+  letter-spacing: 2px;
+}
+
+.wshop-hint {
+  color: #665533;
+  font-size: 12px;
+  text-align: center;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.wshop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  width: 100%;
+}
+
+@media (max-width: 600px) {
+  .wshop-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.wshop-card {
+  background: rgba(0,10,30,0.7);
+  border: 1px solid #443300;
+  border-radius: 10px;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: border-color 0.15s;
+}
+
+.wshop-card:hover { border-color: #aa7700; }
+
+.wshop-card-maxed {
+  border-color: #665500;
+  background: rgba(30,20,0,0.6);
+}
+
+.wshop-card-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.wshop-card-name {
+  font-size: 13px;
+  font-weight: bold;
+  color: #ffdd88;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.wshop-tier-row {
+  display: flex;
+  gap: 5px;
+}
+
+.wshop-pip {
+  width: 14px;
+  height: 6px;
+  border-radius: 3px;
+}
+
+.pip-gold  { background: #ffcc44; box-shadow: 0 0 6px #aa8800; }
+.pip-empty { background: #2a2010; border: 1px solid #443300; }
+
+.wshop-card-desc {
+  font-size: 11px;
+  color: #888;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.wshop-next-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.wshop-next-tier {
+  font-size: 10px;
+  color: #aa8833;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.wshop-maxed-label {
+  font-size: 12px;
+  color: #ffcc44;
+  letter-spacing: 3px;
+  font-weight: bold;
+  padding: 4px 10px;
+  background: rgba(80,60,0,0.4);
+  border: 1px solid #665500;
+  border-radius: 4px;
+}
+
+.wshop-buy-btn {
+  padding: 7px 18px;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.wshop-buy-active {
+  color: #1a0d00;
+  background: linear-gradient(135deg, #cc9900, #ffcc44);
+  border: 2px solid #ffcc44;
+}
+.wshop-buy-active:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 14px #ffcc44;
+}
+
+.wshop-buy-disabled {
+  color: #555;
+  background: rgba(0,0,0,0.3);
+  border: 1px solid #333;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.gold-icon-small { color: #ffcc44; font-size: 12px; }
+
+.wshop-close-btn {
+  margin-top: 8px;
+  padding: 11px 28px;
+  font-family: monospace;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  color: #aaa;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+}
+.wshop-close-btn:hover { color: #ddd; border-color: #888; }

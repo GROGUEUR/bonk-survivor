@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"c:\\\\Users\\\\franc\\\\OneDrive\\\\Documents\\\\Test\\\\Survivor\\\\src\" -type f -exec ls -lh {})",
+      "Read(//c/Users/franc/OneDrive/Documents/Test/Survivor/**)",
+      "Bash(sort -k2)"
+    ]
+  }
+}
