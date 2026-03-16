@@ -18,9 +18,9 @@ export const MAX_PLAYERS = 4;
 
 // ---------- Helpers ----------
 
-function makeShortCode(peerId) {
-  // Use last 6 chars of PeerJS ID as room code
-  return peerId.slice(-6).toUpperCase();
+function generateRoomCode() {
+  // 8-char alphanumeric ID — used as both the PeerJS peer ID and the room code
+  return Math.random().toString(36).slice(2, 10);
 }
 
 // ---------- NetworkManager ----------
@@ -55,12 +55,14 @@ export class NetworkManager {
 
   async createRoom(hostName) {
     return new Promise((resolve, reject) => {
-      this.peer    = new Peer();
-      this.isHost  = true;
+      const roomCode = generateRoomCode();
+      // Use the room code directly as the PeerJS peer ID so guests can connect with it
+      this.peer     = new Peer(roomCode);
+      this.isHost   = true;
+      this.roomCode = roomCode;
 
       this.peer.on('open', (id) => {
         this.hostPeerId       = id;
-        this.roomCode         = makeShortCode(id);
         this.localPlayerIndex = 0;
         this.playerList       = [{ id, name: hostName, index: 0 }];
 
@@ -71,7 +73,15 @@ export class NetworkManager {
         resolve(this.roomCode);
       });
 
-      this.peer.on('error', reject);
+      // If the custom ID is taken, retry with a new one
+      this.peer.on('error', (e) => {
+        if (e.type === 'unavailable-id') {
+          this.peer.destroy();
+          this.createRoom(hostName).then(resolve).catch(reject);
+        } else {
+          reject(e);
+        }
+      });
     });
   }
 

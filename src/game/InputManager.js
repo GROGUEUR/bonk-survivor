@@ -1,8 +1,8 @@
 // P1 key map: WASD / ZQSD + Space dash + Escape pause
 export const P1_KEY_MAP = {
-  up:    ['KeyW', 'KeyZ', 'ArrowUp'],
+  up:    ['KeyZ', 'ArrowUp'],
   down:  ['KeyS', 'ArrowDown'],
-  left:  ['KeyA', 'KeyQ', 'ArrowLeft'],
+  left:  ['KeyQ', 'ArrowLeft'],
   right: ['KeyD', 'ArrowRight'],
   dash:  ['Space'],
   pause: ['Escape'],
